@@ -1,0 +1,140 @@
+---
+title: "Accelerometer and GPS data wrangling"
+author: "Daniel Fuller"
+date: "08/10/2021"
+output:
+      html_document:
+        keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(stringr)
+```
+
+# Accelerometer Data Wrangling
+
+These data are from Ethica Data, which is app manufacturer our INTERACT team has been working with for the past 7 years. 
+
+```{r}
+accel_data <- read_csv("accel_sample_data.csv")
+
+glimpse(accel_data)
+
+table(accel_data$user_id)
+```
+
+# Accel data processing
+
+Tasks
+
+1. Decide which method we are going to use for data processing
+    * ActiGraph Activity Counts (AAC) - [https://cran.r-project.org/web/packages/activityCounts/index.html](https://cran.r-project.org/web/packages/activityCounts/index.html)
+    * Euclidean Norm Minus One (ENMO) - [https://cran.r-project.org/web/packages/GGIR/index.html](https://cran.r-project.org/web/packages/GGIR/index.html)
+    * Monitor Independent Movement Summary (MIMS) [https://cran.r-project.org/web/packages/MIMSunit/index.html](https://cran.r-project.org/web/packages/MIMSunit/index.html)
+    
+### Sorting out time
+
+These data are different from most accelerometer data because the phone does not capture accelerometer data like a traditional research grade device. It optimizes for battery life and often does not have a consistent number of hertz per second. So unlike data were you will set the hertz to 30 or 100 this will be different. 
+
+# ou will probably have to resample the data... but we are not going to do that today because don't have time. 
+
+```{r}
+accel_data$time_factor <- as.factor(accel_data$record_time)
+
+accel_data <- accel_data %>%
+  group_by(record_time) %>%
+  mutate(
+         milli = row_number()
+  )
+
+summary(accel_data$milli)
+```
+
+# Dealing with time
+
+```{r}
+accel_data$day <- day(accel_data$record_time)  ## Create an hour variable
+accel_data$hour <- hour(accel_data$record_time)  ## Create an hour variable
+accel_data$minute <- minute(accel_data$record_time)  ## Create a minute variable
+accel_data$second <- second(accel_data$record_time)  ## Create a second variable
+``` 
+
+# Calculating ENMO
+
+```{r}
+accel_data <- accel_data %>%
+                mutate(
+                  x_g = x_axis/9.80665,
+                  y_g = y_axis/9.80665,
+                  z_g = z_axis/9.80665,
+                  enmo = x_g^2+y_g^2+z_g^2,
+                  enmo_m1 = (x_g^2+y_g^2+z_g^2)-1
+                )
+```
+
+```{r}
+summary(accel_data$enmo_m1)
+
+accel_data <- accel_data %>% filter(enmo_m1 < 10)
+```
+
+ 
+```{r}
+accel_sec <- accel_data %>%
+  group_by(user_id, day, hour, minute, second) %>%
+  summarise(
+         time = first(record_time), 
+         user_id = first(user_id),
+         m_x_g = mean(x_g),
+         m_y_g = mean(y_g),
+         m_z_g = mean(z_g),
+         enmo_m1 = mean(abs(enmo_m1))
+        )
+```
+
+
+#### 5. Use the cut points from this [paper](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0164045) and create a new variable called `activity`. 
+
+| Activity | Cut Point (enmo_m1) | 
+|----------|-----------|
+| Sedentary | <= 6.600 |
+| Moderate | >=6.610 to <64.810 | 
+| Walking | >= 64.8 to max |
+
+
+```{r}
+
+accel_sec <- accel_sec %>%
+	mutate(activity = case_when(
+		enmo_m1 <= 0.06610 ~ "1. Sedentary",
+		enmo_m1 > 0.06610 & enmo_m1 <= 0.6480 ~ "2. Light",
+		enmo_m1 > 0.6481 ~ "3. Walking",
+		TRUE ~ "other"
+	))
+
+table(accel_sec$activity)
+```
+
+```{r}
+fig1 <- ggplot(accel_sec, aes(x = time, y = enmo_m1)) + 
+          geom_point(alpha = 1/10) + 
+            xlab("Time") +
+            ylab("ENMO Minus One") +
+        facet_wrap(~ user_id)
+plot(fig1)
+```
+
+```{r}
+fig2 <- ggplot(accel_sec, aes(x = time, y = enmo_m1)) + 
+          geom_point(alpha = 1/5, aes(colour = factor(activity))) + 
+            xlab("Time") +
+            ylab("ENMO Minus One") +
+        facet_wrap(~ user_id)
+plot(fig2)
+```
