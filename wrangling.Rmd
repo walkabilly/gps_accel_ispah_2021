@@ -14,7 +14,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(lubridate)
+library(ggmap)
 library(stringr)
+library(data.table)
+library(scales)
+library(signal)
+library(magrittr)
+library(furrr)
+library(purrr)
+library(activityCounts)
 ```
 
 # Accelerometer Data Wrangling
@@ -22,7 +30,7 @@ library(stringr)
 These data are from Ethica Data, which is app manufacturer our INTERACT team has been working with for the past 7 years. 
 
 ```{r}
-accel_data <- read_csv("accel_sample_data.csv")
+accel_data <- read.csv("accel_sample_data.csv")
 
 glimpse(accel_data)
 
@@ -50,7 +58,8 @@ accel_data$time_factor <- as.factor(accel_data$record_time)
 accel_data <- accel_data %>%
   group_by(record_time) %>%
   mutate(
-         milli = row_number()
+         milli = row_number(),
+         n = n()
   )
 
 summary(accel_data$milli)
@@ -81,10 +90,11 @@ accel_data <- accel_data %>%
 ```{r}
 summary(accel_data$enmo_m1)
 
-accel_data <- accel_data %>% filter(enmo_m1 < 10)
+accel_data <- dplyr::filter(accel_data, enmo_m1 < 20)
+
+summary(accel_data$enmo_m1)
 ```
 
- 
 ```{r}
 accel_sec <- accel_data %>%
   group_by(user_id, day, hour, minute, second) %>%
@@ -94,47 +104,72 @@ accel_sec <- accel_data %>%
          m_x_g = mean(x_g),
          m_y_g = mean(y_g),
          m_z_g = mean(z_g),
-         enmo_m1 = mean(abs(enmo_m1))
+         enmo_m1 = mean(abs(enmo_m1)),
+         enmo_m1_mg = enmo_m1*1000
         )
+
+summary(accel_sec$enmo_m1_mg)
+
+ggplot(accel_sec, aes(enmo_m1_mg)) +
+        geom_histogram()
 ```
 
-
-#### 5. Use the cut points from this [paper](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0164045) and create a new variable called `activity`. 
+#### 5. Use the cut points from this [paper](https://doi.org/10.3389/fspor.2020.579278) and create a new variable called `activity`. 
 
 | Activity | Cut Point (enmo_m1) | 
 |----------|-----------|
-| Sedentary | <= 6.600 |
-| Moderate | >=6.610 to <64.810 | 
-| Walking | >= 64.8 to max |
+| Sedentary | <= 255 |
+| Moderate | > 255 to <= 588 | 
+| Moderate | >= 588 to max |
 
+*Note. Don't do this at home. Should make sure your sample frequency is correct for the method you are using.*
 
 ```{r}
-
 accel_sec <- accel_sec %>%
 	mutate(activity = case_when(
-		enmo_m1 <= 0.06610 ~ "1. Sedentary",
-		enmo_m1 > 0.06610 & enmo_m1 <= 0.6480 ~ "2. Light",
-		enmo_m1 > 0.6481 ~ "3. Walking",
+		enmo_m1_mg <= 255 ~ "1. Sedentary",
+		enmo_m1_mg > 255 & enmo_m1_mg <= 588 ~ "2. Light",
+		enmo_m1_mg > 588 ~ "3. Moderate",
 		TRUE ~ "other"
 	))
 
 table(accel_sec$activity)
 ```
 
-```{r}
+```{}
 fig1 <- ggplot(accel_sec, aes(x = time, y = enmo_m1)) + 
-          geom_point(alpha = 1/10) + 
+          geom_point(alpha = 0.01, aes(colour = factor(activity))) + 
             xlab("Time") +
-            ylab("ENMO Minus One") +
+            ylab("ENMO") +
         facet_wrap(~ user_id)
 plot(fig1)
 ```
 
+# GPS Sample Data
+
 ```{r}
-fig2 <- ggplot(accel_sec, aes(x = time, y = enmo_m1)) + 
-          geom_point(alpha = 1/5, aes(colour = factor(activity))) + 
-            xlab("Time") +
-            ylab("ENMO Minus One") +
-        facet_wrap(~ user_id)
-plot(fig2)
+gps_data <- read_csv("gps_sample_data.csv")
+
+glimpse(gps_data)
 ```
+
+```{r}
+gps_plot_1 <- ggplot(gps_data) + 
+                  geom_point(aes(x = lon, y = lat)) +
+                  facet_wrap(~ user_id)
+plot(gps_plot_1)
+```
+
+```{r}
+canada_basemap <- get_map(location = "St. John's, Newfoundland, Canada",
+                     source = "google",
+                     maptype = "roadmap", crop = FALSE,
+                     zoom = 12)
+
+maps_points <- ggmap(canada_basemap) + 
+                  geom_point(aes(x = lon, y = lat), data = gps_data, alpha = 0.2) + 
+                  facet_wrap(~ user_id)
+
+plot(maps_points)
+```
+
