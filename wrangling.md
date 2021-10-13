@@ -423,11 +423,8 @@ summary(gps_data$speed)
 ```
 
 ```r
-#We are good for speed here. No need to filter. 
-gps_data <- gps_data %>% dplyr::filter(accu < 200)
-
-gps_plot_accu <- ggplot(gps_data, aes(x = lon, y = lat,  fill = accu)) + 
-                  geom_point() + 
+gps_plot_accu <- ggplot(gps_data, aes(x = lon, y = lat, fill = speed)) + 
+                  geom_point(alpha = 0.2) + 
                   facet_wrap(~ user_id)
 plot(gps_plot_accu)
 ```
@@ -490,7 +487,7 @@ gps_drift <- gps_drift %>% dplyr::filter(speed < 55.6) #Starting dataset n = 826
 ## New dataset n = 8176 
 
 drift_plot <- ggplot(gps_drift, aes(x = lon, y = lat)) + 
-                  geom_point() 
+                  geom_point(alpha = 0.2)
 plot(drift_plot)
 ```
 
@@ -555,7 +552,7 @@ accel_gps_inner <- inner_join(accel_sec, gps_data) # Note the message about the 
 ## Joining, by = c("user_id", "record_time")
 ```
 
-We end up with only data that is included in both the accel and GPS dataset based on the second and on the user_id. So we have 5064 observations. 
+We end up with only data that is included in both the accel and GPS dataset based on the second and on the user_id. So we have 5064 observations. This is very good join. We keep almost all of our smallest dataset and add data from the larger dataset. Our smaller dataset is never going to truly add data.  
 
 
 ```r
@@ -567,7 +564,7 @@ plot(inner_plot)
 
 ![](wrangling_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
 
-#### Full join
+#### Left join
 
 
 ```r
@@ -581,10 +578,10 @@ accel_gps_full <- full_join(accel_sec, gps_data) # Note the message about the jo
 ## Joining, by = c("user_id", "record_time")
 ```
 
-We end up with only data that is included in both the accel and GPS dataset based on the second and on the user_id. So we have 201041 observations. We have many many missing values. 
+We end up with only data that is included in both the accel and GPS dataset based on the second and on the user_id. So we have 201041 observations. We have many many missing values. This may or may not be what we want. 
 
 ### 4. Wear time criteria
 
 Many PA researchers use different wear time criteria to define what would be a `valid` day or week of physical activity measurement. Things like 10 hours per day, and at least 2 week days, and one weekend day. It is very very difficult to do this when combining accel and GPS data. GPS is much more intensive on the device battery and also tends to crash or have problems way more than accel. I recommend not using wear time criteria, and have successfully argued this this reviewers in at least 3 different papers. 
 
-
+# Back to PowerPoint
