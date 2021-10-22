@@ -30,6 +30,14 @@ The target audience for this workshop is students and researchers who plan to or
 
 This workshop will contribute to advancing the standardization and use of combined GPS and accelerometer data. This research is crucial to healthy cities, parks, and recreation research, and to the promotion of holistic physical activity.
 
+## Video
+[Presentation Video](https://www.youtube.com/watch?v=serb47cMSl0)
+
+## Powerpoint Presentation
+
+[PowerPoint File](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/8thISPAHCongress_GPS_Accel.pptx)
+[PDF File](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/8thISPAHCongress_GPS_Accel.pdf)
+
 ## Download the sample data here
 
 1. [Accel Sample Data](https://www.dropbox.com/s/u8kdsmvkullbv97/accel_sample_data.csv?dl=0) 257.8MB
@@ -40,7 +48,4 @@ This workshop will contribute to advancing the standardization and use of combin
 [MD File for viewing online](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/wrangling.md)
 [Rmd File for download](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/wrangling.Rmd)
 
-## Powerpoint Presentation
 
-[PowerPoint File](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/8thISPAHCongress_GPS_Accel.pptx)
-[PDF File](https://github.com/walkabilly/gps_accel_ispah_2021/blob/main/8thISPAHCongress_GPS_Accel.pdf)
